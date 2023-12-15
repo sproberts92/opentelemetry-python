@@ -421,3 +421,20 @@ class TestPrometheusMetricReader(TestCase):
             prometheus_metric.samples[0].labels["system_name"],
             "Prometheus Target Sanitize",
         )
+
+    def test_multiple_different_labels(self):
+        metric_reader = PrometheusMetricReader(disable_target_info=True)
+        provider = MeterProvider(
+            metric_readers=[metric_reader],
+            resource=Resource({}),
+        )
+        meter = provider.get_meter("getting-started", "0.1.2")
+        counter = meter.create_counter("counter")
+        counter.add(1, {"foo": "bar"})
+        counter.add(1, {"baz": "qux"})
+
+        result = list(metric_reader._collector.collect())
+        
+        self.assertEqual(result[0].samples[0].labels, {"foo": "bar"})
+        self.assertEqual(result[1].samples[0].labels, {"baz": "qux"})
+
